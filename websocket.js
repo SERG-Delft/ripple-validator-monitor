@@ -1,26 +1,46 @@
-WebSocket = require('ws')
+const RippleAPI = require('ripple-lib').RippleAPI;
 
-subscription = '{"id":"subscribe_ID","command":"subscribe","streams":["ledger", "validations"]}'
+const monitor_node = 'wss://ripple5.ewi.tudelft.nl'
+const ewi_hash = "nHDDkPeX4CzMrXAQXNQqVSxkPmRbrxReC5NUHWPCmDezfADKKwDQ"
 
-ewi_socket = new WebSocket('wss://ripple5.ewi.tudelft.nl')
-ewi_node = "nHDDkPeX4CzMrXAQXNQqVSxkPmRbrxReC5NUHWPCmDezfADKKwDQ"
+const validated_ledgers = []
+const canonical_ledgers = []
 
-validated_ledgers = []
-canonical_ledgers = []
+const api = new RippleAPI({
+  server: monitor_node
+});
 
-ewi_socket.on('open', function() {
-    console.log("Connected to ripple.ewi.tudelft.nl")
-    ewi_socket.send(subscription)
-})
+api.on('error', (errorCode, errorMessage) => {
+    console.log(errorCode + ': ' + errorMessage);
+});
 
-ewi_socket.on('message', function(message){
-    msg = JSON.parse(message)
-    if (msg.type === "ledgerClosed") {
-        canonical_ledgers.push(msg.ledger_hash)
-        console.log("Canonical ledger is", msg.ledger_hash)
-    } else if (msg.type === "validationReceived" && msg.master_key === ewi_node) {    
-        validated_ledgers.push(msg.ledger_hash)
-        console.log("EWI: Validation of ledger", msg.ledger_hash, "by node", ewi_node)
-    }
-})
+api.on('connected', () => {
+    console.log('Connected to Ripple node');
+});
+  
+api.on('disconnected', (code) => {
+    console.log('disconnected, code:', code);
+});
+
+api.connect().then(() => {
+    api.connection.on('ledgerClosed', (event) => {
+        canonical_ledgers.push(event.ledger_hash)
+        console.log("Canonical ledger is", event.ledger_hash)
+    })
+  
+    api.connection.on('validationReceived', (event) => {
+        if (event.master_key === ewi_hash) {
+            validated_ledgers.push(event.ledger_hash)
+            console.log("EWI: Validation of ledger", event.ledger_hash, "by node", ewi_hash)
+        }
+    })
+  
+    api.request('subscribe', {
+      streams: ['ledger', 'validations']
+    }).then(response => {
+        console.log('Successfully subscribed')
+    }).catch(error => {
+        console.log(error)
+    })
+  }).catch(console.error);
 

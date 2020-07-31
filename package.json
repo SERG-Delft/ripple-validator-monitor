@@ -1,0 +1,14 @@
+{
+  "name": "ripple-validator-monitor",
+  "version": "1.0.0",
+  "main": "websocket.js",
+  "repository": "git@github.com:SERG-Delft/ripple-validator-monitor.git",
+  "author": "Merel",
+  "license": "MIT",
+  "dependencies": {
+    "ripple-lib": "^1.8.0"
+  },
+  "scripts": {
+    "build": "node websocket.js"
+  }
+}
